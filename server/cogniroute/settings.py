@@ -192,6 +192,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+if REDIS_URL.startswith('rediss://'):
+    # Bypass certificate validation when connecting to serverless Redis via SSL
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': 'none'
+    }
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': 'none'
+    }
+
+
 # AI Provider Settings
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'mock')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
