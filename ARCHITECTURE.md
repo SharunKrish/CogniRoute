@@ -14,23 +14,36 @@ CogniRoute implements a clean relational schema to ensure auditability, transact
 │      (User)      │       │                      │
 │ ──────────────── │       │ ──────────────────── │
 │  id        (PK)  │◄──┐   │  id             (PK) │
-│  username  (UK)  │   │   │  status        (IDX) │
-│  role   (choice) │   │   │  cat_snapshot  (IDX) │
+│  username  (UK)  │   │   │  source_channel      │
+│  role   (choice) │   │   │  customer_name       │
+│                  │   │   │  original_message    │
+│                  │   │   │  status        (IDX) │
+│                  │   │   │  cat_snapshot  (IDX) │
 │                  │   │   │  pri_snapshot  (IDX) │
-│                  │   │   │  idempotency   (IDX) │
+│                  │   │   │  idempotency   (UK)  │
+│                  │   │   │  created_at    (IDX) │
 └──────────────────┘   │   └──────────────────────┘
-         │             │              │
-         │             │              ├───────────────────────┐
-         ▼             │              ▼                       ▼
+         │             │        │          │
+         │             │        │          ├──────────────────────┐
+         ▼             │        ▼          │                      ▼
 ┌──────────────────┐   │   ┌──────────────────────┐   ┌──────────────────────┐
 │  internal_notes  │   │   │  ai_classifications  │   │    request_events    │
 │                  │   │   │                      │   │     (Audit Log)      │
 │ ──────────────── │   │   │ ──────────────────── │   │ ──────────────────── │
-│  id         (PK) │   └───┼──author_id      (FK) │   │  id             (PK) │
-│  request_id (FK) ├───┼───┼──request_id     (FK) │   │  request_id     (FK) │
-│  author_id  (FK) │   │   │  status        (IDX) │   │  event_type    (IDX) │
-│  body     (text) │   │   │  confidence  (float) │   │  timestamp     (IDX) │
-└──────────────────┘   │   └──────────────────────┘   └──────────────────────┘
+│  id         (PK) │   │   │  id             (PK) │   │  id             (PK) │
+│  request_id (FK) │───┘   │  request_id     (FK) │   │  request_id     (FK) │
+│  author_id  (FK) │       │  provider    (char)  │   │  event_type    (IDX) │
+│  body     (text) │       │  category    (char)  │   │  old_value     (str) │
+│  created_at(IDX) │       │  priority    (char)  │   │  new_value     (str) │
+└──────────────────┘       │  summary     (text)  │   │  actor         (str) │
+                           │  confidence  (float) │   │  metadata     (JSON) │
+                           │  reason      (text)  │   │  timestamp     (IDX) │
+                           │  raw_output  (JSON)  │   └──────────────────────┘
+                           │  status       (IDX)  │
+                           │  error_message(text) │
+                           │  retry_count  (int)  │
+                           │  created_at   (IDX)  │
+                           └──────────────────────┘
 ```
 
 ### Separating Classification Details from Request Attributes
