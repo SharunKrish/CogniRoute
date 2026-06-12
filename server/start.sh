@@ -13,7 +13,7 @@ echo "==> Collecting Static Files..."
 python manage.py collectstatic --noinput
 
 echo "==> Starting Celery Worker in background..."
-celery -A cogniroute worker --loglevel=info &
+celery -A cogniroute worker --loglevel=info -P solo &
 
 echo "==> Starting Daphne ASGI Server..."
 # Daphne will bind to $PORT or default 8000
