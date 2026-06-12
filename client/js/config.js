@@ -8,8 +8,8 @@ const CONFIG = {
     // Detect if we are running in production on Vercel
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       // Replace with your Render URL (e.g., https://cogniroute-api.onrender.com)
-      this.API_BASE_URL = 'https://cogniroute-api.onrender.com';
-      this.WS_BASE_URL = 'wss://cogniroute-api.onrender.com';
+      this.API_BASE_URL = 'https://cogniroute.onrender.com';
+      this.WS_BASE_URL = 'wss://cogniroute.onrender.com';
     }
   }
 };
