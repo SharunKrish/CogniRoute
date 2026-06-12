@@ -4,9 +4,16 @@ from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Lightweight health check for cron jobs / uptime monitors
+    path('health/', health_check, name='health_check'),
     
     # Auth endpoints
     path('api/auth/', include('accounts.urls')),
