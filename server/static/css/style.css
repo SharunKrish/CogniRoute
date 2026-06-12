@@ -272,6 +272,10 @@ main {
   font-size: 0.95rem;
   transition: all var(--transition-fast);
 }
+.form-control option {
+  background-color: #0b0f19;
+  color: #f3f4f6;
+}
 .form-control:focus {
   outline: none;
   border-color: var(--border-focus);
@@ -349,6 +353,10 @@ textarea.form-control {
   background-position: right 0.75rem center;
   background-size: 1rem;
   min-width: 150px;
+}
+.filter-select option {
+  background-color: #0b0f19;
+  color: #f3f4f6;
 }
 .filter-select:focus {
   border-color: var(--border-focus);
