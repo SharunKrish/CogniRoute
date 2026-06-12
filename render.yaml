@@ -1,0 +1,74 @@
+services:
+  # 1. PostgreSQL Database
+  - type: database
+    name: cogniroute-db
+    databaseName: cogniroute
+    user: cogniroute_user
+    plan: free
+
+  # 2. Managed Redis
+  - type: redis
+    name: cogniroute-redis
+    plan: free
+    ipAllowList: [] # Only allow internal connection
+
+  # 3. Django Web API & Frontend (Daphne ASGI)
+  - type: web
+    name: cogniroute-web
+    env: docker
+    plan: free
+    dockerFilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: >
+      bash -c "python manage.py migrate &&
+               python seed_db.py &&
+               python manage.py collectstatic --noinput &&
+               daphne -b 0.0.0.0 -p 8000 cogniroute.asgi:application"
+    healthCheckPath: /
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: "cogniroute-web.onrender.com,localhost,127.0.0.1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cogniroute-db
+          property: connectionString
+      - key: REDIS_URL
+        fromRedis:
+          name: cogniroute-redis
+          property: connectionString
+      - key: AI_PROVIDER
+        value: gemini
+      - key: WEBHOOK_SECRET
+        value: cognifyr-secret-token-123
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # 4. Celery Async Background Worker
+  - type: worker
+    name: cogniroute-worker
+    env: docker
+    plan: free
+    dockerFilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: celery -A cogniroute worker --loglevel=info
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cogniroute-db
+          property: connectionString
+      - key: REDIS_URL
+        fromRedis:
+          name: cogniroute-redis
+          property: connectionString
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false

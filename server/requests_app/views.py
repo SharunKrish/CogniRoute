@@ -1,0 +1,331 @@
+from rest_framework import viewsets, permissions, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+from .models import CustomerRequest, AIClassification, RequestEvent, InternalNote
+from .serializers import (
+    CustomerRequestCreateSerializer,
+    CustomerRequestListSerializer,
+    CustomerRequestDetailSerializer,
+    InternalNoteSerializer,
+)
+
+def broadcast_dashboard_update(request_obj, event_type):
+    """
+    Utility to broadcast a request update to all websocket clients on 'dashboard_updates' group
+    """
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        try:
+            async_to_sync(channel_layer.group_send)(
+                'dashboard_updates',
+                {
+                    'type': 'send_dashboard_update',
+                    'data': {
+                        'event': event_type,
+                        'request': CustomerRequestListSerializer(request_obj).data
+                    }
+                }
+            )
+        except Exception as e:
+            # Avoid crashing request loop if channels redis layer is not running
+            print(f"WS Broadcast failed: {e}")
+
+
+class CustomerRequestViewSet(viewsets.ModelViewSet):
+    queryset = CustomerRequest.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CustomerRequestCreateSerializer
+        elif self.action == 'retrieve':
+            return CustomerRequestDetailSerializer
+        return CustomerRequestListSerializer
+
+    def get_queryset(self):
+        queryset = CustomerRequest.objects.all()
+        
+        # Filtering
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+            
+        priority_param = self.request.query_params.get('priority')
+        if priority_param:
+            queryset = queryset.filter(priority_snapshot=priority_param)
+            
+        category_param = self.request.query_params.get('category')
+        if category_param:
+            queryset = queryset.filter(category_snapshot=category_param)
+            
+        # Search
+        search_param = self.request.query_params.get('search')
+        if search_param:
+            queryset = queryset.filter(
+                models.Q(customer_name__icontains=search_param) |
+                models.Q(customer_email__icontains=search_param) |
+                models.Q(original_message__icontains=search_param)
+            )
+            
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        # Prevent duplicate submissions with Idempotency Key
+        idempotency_key = request.data.get('idempotency_key')
+        if idempotency_key:
+            existing = CustomerRequest.objects.filter(idempotency_key=idempotency_key).first()
+            if existing:
+                serializer = CustomerRequestDetailSerializer(existing)
+                return Response(
+                    {"message": "Duplicate request blocked by idempotency key.", "data": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        with transaction.atomic():
+            customer_request = serializer.save()
+            
+            # Log creation event
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='created',
+                actor=request.user.username,
+                new_value='new'
+            )
+            
+            # Update status to queued and log queue event
+            customer_request.status = 'queued'
+            customer_request.save()
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='queued',
+                actor='system',
+                old_value='new',
+                new_value='queued'
+            )
+
+        # Import celery tasks inline to avoid circular dependencies
+        from .tasks import classify_request
+        
+        # Trigger async AI classification in background via Celery
+        try:
+            classify_request.delay(customer_request.id)
+        except Exception as e:
+            # Fallback if Celery/Redis is down in dev, we can note it but keep API working
+            print(f"Celery task queueing failed: {e}")
+            # Still log a failed/pending status so user can retry manually
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='classification_failed',
+                actor='system',
+                metadata={'error': 'Task queueing failed: Redis down?'}
+            )
+
+        # Broadcast WebSocket event
+        broadcast_dashboard_update(customer_request, 'request_created')
+
+        detail_serializer = CustomerRequestDetailSerializer(customer_request)
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'], url_path='status')
+    def update_status(self, request, pk=None):
+        customer_request = self.get_object()
+        new_status = request.data.get('status')
+        
+        valid_statuses = [choice[0] for choice in CustomerRequest.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return Response(
+                {"error": f"Invalid status. Choose from: {', '.join(valid_statuses)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        old_status = customer_request.status
+        if old_status == new_status:
+            return Response(CustomerRequestDetailSerializer(customer_request).data)
+
+        with transaction.atomic():
+            customer_request.status = new_status
+            customer_request.save()
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='status_changed',
+                old_value=old_status,
+                new_value=new_status,
+                actor=request.user.username
+            )
+
+        broadcast_dashboard_update(customer_request, 'status_changed')
+        
+        return Response(CustomerRequestDetailSerializer(customer_request).data)
+
+    @action(detail=True, methods=['post'], url_path='notes')
+    def add_note(self, request, pk=None):
+        customer_request = self.get_object()
+        body = request.data.get('body')
+        
+        if not body:
+            return Response({"error": "Note body is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        with transaction.atomic():
+            note = InternalNote.objects.create(
+                request=customer_request,
+                author=request.user,
+                body=body
+            )
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='note_added',
+                actor=request.user.username,
+                metadata={'note_id': note.id}
+            )
+
+        broadcast_dashboard_update(customer_request, 'note_added')
+        
+        return Response(CustomerRequestDetailSerializer(customer_request).data)
+
+    @action(detail=True, methods=['post'], url_path='retry-classification')
+    def retry_classification(self, request, pk=None):
+        customer_request = self.get_object()
+        
+        with transaction.atomic():
+            customer_request.status = 'queued'
+            customer_request.save()
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='queued',
+                actor=request.user.username,
+                new_value='queued'
+            )
+
+        from .tasks import classify_request
+        try:
+            classify_request.delay(customer_request.id)
+        except Exception as e:
+            print(f"Celery task retry queueing failed: {e}")
+            return Response({"error": "Redis broker unreachable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
+        broadcast_dashboard_update(customer_request, 'retry_triggered')
+        
+        return Response(CustomerRequestDetailSerializer(customer_request).data)
+
+# Include Q imports to avoid NameError in queryset search
+from django.db import models
+from rest_framework.views import APIView
+from django.conf import settings
+
+class InboundWebhookView(APIView):
+    """
+    Public webhook endpoint that receives messages from simulated external sources
+    such as WhatsApp, email, or website forms.
+    Uses SHA256 HMAC header verification for security.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        # 1. Signature Verification
+        received_signature = request.headers.get('X-Webhook-Signature')
+        webhook_secret = getattr(settings, 'WEBHOOK_SECRET', 'cognifyr-secret-token-123')
+        
+        body_bytes = request.body
+        expected_signature = hmac.new(
+            webhook_secret.encode('utf-8'),
+            body_bytes,
+            hashlib.sha256
+        ).hexdigest()
+
+        # Support a simpler fallback for easier manual testing (simple query/secret header check)
+        secret_header = request.headers.get('X-Cognifyr-Secret')
+        
+        if received_signature != expected_signature and secret_header != webhook_secret:
+            return Response(
+                {"error": "Webhook signature verification failed."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # 2. Extract and Validate Input
+        data = request.data
+        customer_name = data.get('sender_name')
+        customer_email = data.get('sender_email')
+        source_channel = data.get('channel')
+        original_message = data.get('message')
+        idempotency_key = data.get('idempotency_key')
+
+        if not original_message or not customer_name or not customer_email:
+            return Response(
+                {"error": "Missing mandatory fields: sender_name, sender_email, and message are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if source_channel not in ['website', 'whatsapp', 'email', 'telegram', 'api']:
+            return Response(
+                {"error": "Invalid channel. Choose from: website, whatsapp, email, telegram, api"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Prevent duplicate requests with Idempotency Key
+        if idempotency_key:
+            existing = CustomerRequest.objects.filter(idempotency_key=idempotency_key).first()
+            if existing:
+                return Response(
+                    {"message": "Duplicate request blocked by idempotency key.", "id": existing.id},
+                    status=status.HTTP_200_OK
+                )
+
+        # 4. Create request and trigger worker
+        with transaction.atomic():
+            customer_request = CustomerRequest.objects.create(
+                source_channel=source_channel,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                original_message=original_message,
+                idempotency_key=idempotency_key,
+                status='new'
+            )
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='created',
+                actor='webhook',
+                new_value='new'
+            )
+            
+            customer_request.status = 'queued'
+            customer_request.save()
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='queued',
+                actor='system',
+                old_value='new',
+                new_value='queued'
+            )
+
+        from .tasks import classify_request
+        try:
+            classify_request.delay(customer_request.id)
+        except Exception as e:
+            print(f"Celery task queueing failed from webhook: {e}")
+
+        # Broadcast WebSocket event
+        broadcast_dashboard_update(customer_request, 'request_created')
+
+        return Response({
+            "message": "Webhook request enqueued successfully.",
+            "request_id": customer_request.id,
+            "status": "queued"
+        }, status=status.HTTP_201_CREATED)
+
+import hmac
+import hashlib
+
