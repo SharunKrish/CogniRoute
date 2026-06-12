@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CogniRoute — AI Request routing dashboard</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <div class="logo-container">
+        <div class="logo-icon">C</div>
+        <div class="logo-text">CogniRoute</div>
+      </div>
+      <div class="header-status">
+        <div id="ws-status" class="ws-badge disconnected">
+          <span class="ws-indicator"></span>
+          <span class="ws-status-text">Disconnected</span>
+        </div>
+        <div id="header-user-section" class="user-profile" style="display: none;">
+          <div id="user-badge" class="user-avatar">A</div>
+          <span id="user-display-name">Username</span>
+          <button id="logout-btn" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Slot -->
+    <main id="main-content">
+      <!-- Views will be dynamically injected here by Javascript -->
+      <div class="glass-card" style="text-align: center; padding: 3rem;">
+        <div class="shimmer" style="margin: 10px auto; width: 60px; height: 60px; border-radius: 50%;"></div>
+        <div class="shimmer" style="margin: 10px auto; width: 200px; height: 20px;"></div>
+        <div class="shimmer" style="margin: 10px auto; width: 150px; height: 15px;"></div>
+      </div>
+    </main>
+
+    <!-- Native Dialog for Creating Customer Request (Declaratively toggleable / light-dismiss supported) -->
+    <dialog id="create-request-dialog" closedby="any" aria-labelledby="dialog-title">
+      <div class="dialog-header">
+        <h3 id="dialog-title">New Customer Request</h3>
+        <button class="dialog-close-btn" commandfor="create-request-dialog" command="close">&times;</button>
+      </div>
+      <form id="create-request-form" method="dialog">
+        <div class="form-group">
+          <label for="req-name">Customer Name</label>
+          <input type="text" id="req-name" class="form-control" placeholder="E.g., John Doe" required>
+        </div>
+        <div class="form-group">
+          <label for="req-email">Customer Email</label>
+          <input type="email" id="req-email" class="form-control" placeholder="E.g., john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="req-channel">Source Channel</label>
+          <select id="req-channel" class="form-control">
+            <option value="website">Website Form</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="email">Email Inbox</option>
+            <option value="telegram">Telegram</option>
+            <option value="api">Direct API</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="req-message">Customer Message</label>
+          <textarea id="req-message" class="form-control" placeholder="Enter customer's raw inquiry or message details here..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="req-idempotency">Idempotency Key (Optional)</label>
+          <input type="text" id="req-idempotency" class="form-control" placeholder="E.g., unique-uuid-or-hash">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" commandfor="create-request-dialog" command="close">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Request</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Live Alerts / Toast Center -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Polyfills / Modern overlays support -->
+  <script type="module">
+    // 1. Invoker Commands Polyfill
+    if (!('commandForElement' in HTMLButtonElement.prototype)) {
+      import('https://esm.run/invokers-polyfill').then(() => {
+        console.log('Invoker Commands Polyfill applied.');
+      });
+    }
+    
+    // 2. Light Dismiss Fallback for dialog click/backdrop
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      const dialog = document.getElementById('create-request-dialog');
+      dialog.addEventListener('click', (event) => {
+        if (event.target !== dialog) return;
+        const rect = dialog.getBoundingClientRect();
+        const isDialogContent = (
+          rect.top <= event.clientY &&
+          event.clientY <= rect.top + rect.height &&
+          rect.left <= event.clientX &&
+          event.clientX <= rect.left + rect.width
+        );
+        if (!isDialogContent) {
+          dialog.close();
+        }
+      });
+    }
+  </script>
+
+  <!-- Application scripts -->
+  <script src="./js/config.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/dashboard.js"></script>
+  <script src="./js/detail.js"></script>
+  <script src="./js/websocket.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

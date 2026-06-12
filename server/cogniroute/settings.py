@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Should be as high as possible
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -158,7 +159,19 @@ SIMPLE_JWT = {
 }
 
 # CORS configuration
-CORS_ALLOW_ALL_ORIGINS = True  # For MVP, allow all origins. Can be restricted in prod.
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in
+    os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000').split(',')
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF trusted origins (needed for the Vercel frontend domain)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in
+    os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000').split(',')
+    if origin.strip()
+]
 
 # Channels configuration
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -196,6 +209,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
