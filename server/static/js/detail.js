@@ -34,6 +34,8 @@ const detail = {
       ? req.classifications[0] 
       : null;
 
+    const isAdmin = auth.currentUser && auth.currentUser.role === 'admin';
+
     let aiCardHtml = '';
     if (latestClass) {
       const confidencePercent = Math.round(latestClass.confidence * 100);
@@ -65,9 +67,11 @@ const detail = {
             <p style="color: var(--text-secondary); font-size: 0.85rem; font-family: var(--font-mono); background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
               ${escapeHtml(latestClass.error_message)}
             </p>
-            <button id="detail-retry-btn-inline" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
-              🔄 Retry Classification
-            </button>
+            ${isAdmin ? `
+              <button id="detail-retry-btn-inline" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                🔄 Retry Classification
+              </button>
+            ` : ''}
           </div>
         `;
       } else {
@@ -113,7 +117,9 @@ const detail = {
       aiCardHtml = `
         <div class="glass-card ai-card" style="text-align: center; padding: 2rem;">
           <p style="color: var(--text-secondary); margin-bottom: 1rem;">No AI classification has run for this request.</p>
-          <button id="detail-run-classify-btn" class="btn btn-primary" style="font-size: 0.85rem;">Run AI Classifier</button>
+          ${isAdmin ? `
+            <button id="detail-run-classify-btn" class="btn btn-primary" style="font-size: 0.85rem;">Run AI Classifier</button>
+          ` : ''}
         </div>
       `;
     }
@@ -136,6 +142,7 @@ const detail = {
       <div class="view-container">
         <!-- Back to queue -->
         <a href="#dashboard" style="color: var(--accent-blue); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-bottom: 1.5rem; font-weight: 550;">
+          <!-- Return to Operations Queue -->
           ← Return to Operations Queue
         </a>
 
@@ -148,7 +155,7 @@ const detail = {
             </div>
           </div>
           <div style="display: flex; gap: 1rem; align-items: center;">
-            ${latestClass && latestClass.status === 'failed' ? `
+            ${latestClass && latestClass.status === 'failed' && isAdmin ? `
               <button id="detail-retry-btn" class="btn btn-secondary">
                 🔄 Retry AI Route
               </button>

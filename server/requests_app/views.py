@@ -40,6 +40,12 @@ class CustomerRequestViewSet(viewsets.ModelViewSet):
     queryset = CustomerRequest.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
 
+    def get_permissions(self):
+        if self.action in ['destroy', 'retry_classification']:
+            from .permissions import IsAdminUserRole
+            return [permissions.IsAuthenticated(), IsAdminUserRole()]
+        return [permissions.IsAuthenticated()]
+
     def get_serializer_class(self):
         if self.action == 'create':
             return CustomerRequestCreateSerializer
