@@ -24,8 +24,8 @@ CogniRoute implements a clean relational schema to ensure auditability, transact
 │                  │   │   │  created_at    (IDX) │
 └──────────────────┘   │   └──────────────────────┘
          │             │        │          │
-         │             │        │          ├──────────────────────┐
-         ▼             │        ▼          │                      ▼
+         │             │        │          ├────────────────────┐
+         ▼             │        ▼                               ▼
 ┌──────────────────┐   │   ┌──────────────────────┐   ┌──────────────────────┐
 │  internal_notes  │   │   │  ai_classifications  │   │    request_events    │
 │                  │   │   │                      │   │     (Audit Log)      │

@@ -88,7 +88,7 @@ All requests should be sent to `/api/` or `/api/auth/` and must include `Content
 ### Create Request (Enqueues AI Classification)
 * **Method & Route**: `POST /api/requests/`
 * **Auth**: Required
-* **Headers**: `Idempotency-Key` (Optional UUID or hash string to prevent duplicate submissions)
+* **Idempotency**: Include `idempotency_key` in the JSON body (optional UUID or hash string to prevent duplicate submissions)
 * **Payload**:
   ```json
   {
@@ -99,7 +99,7 @@ All requests should be sent to `/api/` or `/api/auth/` and must include `Content
     "idempotency_key": "some-unique-transaction-key"
   }
   ```
-* **Success Response (210 Created)**:
+* **Success Response (201 Created)**:
   ```json
   {
     "id": 12,
@@ -218,8 +218,15 @@ All requests should be sent to `/api/` or `/api/auth/` and must include `Content
 
 ### Manual Retry Classification
 * **Method & Route**: `POST /api/requests/:id/retry-classification/`
-* **Auth**: Required
+* **Auth**: Required (Admin role only)
 * **Success Response (200 OK)**: Detailed Request Object (sets request to queued and spawns Celery classifier)
+* **Note**: Returns `403 Forbidden` for users with the `agent` role.
+
+### Delete Request
+* **Method & Route**: `DELETE /api/requests/:id/`
+* **Auth**: Required (Admin role only)
+* **Success Response (204 No Content)**
+* **Note**: Returns `403 Forbidden` for users with the `agent` role.
 
 ---
 

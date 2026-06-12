@@ -207,6 +207,9 @@ AI_PROVIDER = os.getenv('AI_PROVIDER', 'mock')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
+# Webhook Secret for HMAC verification
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', 'cognifyr-secret-token-123')
+
 # Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
