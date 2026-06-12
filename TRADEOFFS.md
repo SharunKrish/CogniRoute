@@ -10,13 +10,18 @@ This document summarizes the technical choices, limitations, and future improvem
 - **Decision**: Used SQLite locally for development speed and zero local setup overhead. Configured the code to parse `DATABASE_URL` dynamically to swap to PostgreSQL for Render deployment or Docker Compose runs.
 - **Tradeoff**: SQLite has locking limitations for highly concurrent writes. While suitable for local MVPs, production environments MUST use the PostgreSQL engine configured in our Docker and Render templates.
 
-### Celery/Redis for Queues
-- **Decision**: Adopted Celery with Redis for background processing.
-- **Tradeoff**: Celery is a heavy-weight task queue that requires a Redis broker service running. For a smaller deployment without a broker, standard Python threads or Django Channels background workers could run inside the web container. However, using Celery ensures that if the Django ASGI process restarts or hangs, task execution state is not lost and queued items will still finish processing.
+### Celery/Redis for Queues & Production Memory Management
+- **Decision**: Adopted Celery with Redis for background processing. In production, we integrated with **Upstash Serverless Redis** and configured Django/Celery to accept `rediss://` TLS URLs with explicit SSL context overrides (`ssl_cert_reqs='none'`) to handle serverless Redis handshakes.
+- **Tradeoff**: Celery is a heavy-weight queue manager that defaults to a prefork pool, which spawns multiple processes and easily crashes the 512MB RAM free-tier container limit on Render. To solve this, we configured the production worker command to run Celery with the **solo execution pool** (`-P solo`). This keeps all task processes inside a single thread, reducing the backend container footprint to a stable ~110MB.
+
+### Decoupled Hosting Architecture (Vercel & Render)
+- **Decision**: Separated the single-page application (SPA) client onto **Vercel** and deployed the Django server / Celery worker onto **Render**.
+- **Tradeoff**: Decoupling the client requires configuring Cross-Origin Resource Sharing (CORS) lists and Cross-Site Request Forgery (CSRF) trusted origins on the Django backend. However, it ensures that static asset delivery is offloaded to Vercel's global Edge CDN network, preserving Render web container CPU and memory strictly for API handling, WebSocket connections, and background classification tasks.
 
 ### Custom JWT Query-String Authentication for WebSockets
 - **Decision**: Passed the JWT in the query string parameters during WebSocket connection handshakes (`/ws/updates/?token=<token>`).
 - **Tradeoff**: Query string parameters can sometimes be logged in server logs or proxy logs, making them slightly less secure than standard headers. However, since browsers do not support sending custom headers in the native `WebSocket` API constructor, the query string approach is the standard industry practice. We mitigate risk by setting short-lived JWT tokens (2 hours) and verifying signatures on the server side instantly.
+
 
 ---
 
