@@ -1,8 +1,0 @@
-.venv/
-*.pyc
-__pycache__/
-db.sqlite3
-.env
-.idea/
-.vscode/
-static/node_modules/

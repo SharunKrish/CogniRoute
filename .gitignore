@@ -1,0 +1,29 @@
+# Python build/cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+*.pyc
+
+# Local Databases
+db.sqlite3
+*.db
+
+# Django staticfiles cache
+server/staticfiles/
+staticfiles/
+
+# Environment secrets
+.env
+server/.env
+
+# IDE / System configurations
+.idea/
+.vscode/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
