@@ -84,7 +84,7 @@ def seed():
             "email": "spammer99@lottery-winner.ru",
             "channel": "api",
             "message": "CONGRATULATIONS!!! You have won a free lottery ticket worth $10,000! Click here now to claim your cash prize and double your crypto wealth overnight! No credit card needed.",
-            "status": "closed",
+            "status": "resolved",
             "category": "spam",
             "priority": "low",
             "summary": "[SPAM] High risk lottery and crypto phishing message.",
@@ -122,7 +122,7 @@ def seed():
             request=req,
             event_type='created',
             actor='system',
-            new_value='new',
+            new_value='queued',
             timestamp=datetime.now() - timedelta(minutes=60)
         )
         
@@ -131,7 +131,6 @@ def seed():
             request=req,
             event_type='queued',
             actor='system',
-            old_value='new',
             new_value='queued',
             timestamp=datetime.now() - timedelta(minutes=58)
         )
@@ -169,7 +168,7 @@ def seed():
         )
 
         # If it has progressed beyond 'classified'
-        if item["status"] in ['in_progress', 'resolved', 'closed']:
+        if item["status"] in ['in_progress', 'resolved']:
             RequestEvent.objects.create(
                 request=req,
                 event_type='status_changed',

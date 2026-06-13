@@ -126,12 +126,10 @@ const detail = {
 
     // Status Selector dropdown
     const statuses = [
-      { val: 'new', label: 'New' },
       { val: 'queued', label: 'Queued' },
       { val: 'classified', label: 'Classified' },
       { val: 'in_progress', label: 'In Progress' },
-      { val: 'resolved', label: 'Resolved' },
-      { val: 'closed', label: 'Closed' }
+      { val: 'resolved', label: 'Resolved' }
     ];
 
     const statusOptions = statuses.map(s => `

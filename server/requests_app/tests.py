@@ -114,7 +114,7 @@ class RequestTests(APITestCase):
             customer_email='jane@example.com',
             source_channel='api',
             original_message='Message details',
-            status='new'
+            status='queued'
         )
         
         status_url = reverse('request-update-status', args=[req.id])
@@ -124,7 +124,7 @@ class RequestTests(APITestCase):
         # Check database update and event
         req.refresh_from_db()
         self.assertEqual(req.status, 'in_progress')
-        self.assertTrue(RequestEvent.objects.filter(request=req, event_type='status_changed', old_value='new', new_value='in_progress').exists())
+        self.assertTrue(RequestEvent.objects.filter(request=req, event_type='status_changed', old_value='queued', new_value='in_progress').exists())
 
     def test_webhook_inbound_secret_and_hmac(self):
         # 1. Unauthenticated Webhook call

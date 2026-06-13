@@ -73,12 +73,10 @@ const dashboard = {
 
           <select id="filter-status" class="filter-select">
             <option value="">All Statuses</option>
-            <option value="new" ${this.filters.status === 'new' ? 'selected' : ''}>New</option>
             <option value="queued" ${this.filters.status === 'queued' ? 'selected' : ''}>Queued</option>
             <option value="classified" ${this.filters.status === 'classified' ? 'selected' : ''}>Classified</option>
             <option value="in_progress" ${this.filters.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
             <option value="resolved" ${this.filters.status === 'resolved' ? 'selected' : ''}>Resolved</option>
-            <option value="closed" ${this.filters.status === 'closed' ? 'selected' : ''}>Closed</option>
           </select>
 
           <select id="filter-category" class="filter-select">

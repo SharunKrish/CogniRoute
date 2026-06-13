@@ -103,18 +103,13 @@ class CustomerRequestViewSet(viewsets.ModelViewSet):
                 request=customer_request,
                 event_type='created',
                 actor=request.user.username,
-                new_value='new'
+                new_value='queued'
             )
-            
-            # Update status to queued and log queue event
-            customer_request.status = 'queued'
-            customer_request.save()
             
             RequestEvent.objects.create(
                 request=customer_request,
                 event_type='queued',
                 actor='system',
-                old_value='new',
                 new_value='queued'
             )
 
@@ -296,24 +291,20 @@ class InboundWebhookView(APIView):
                 customer_email=customer_email,
                 original_message=original_message,
                 idempotency_key=idempotency_key,
-                status='new'
+                status='queued'
             )
             
             RequestEvent.objects.create(
                 request=customer_request,
                 event_type='created',
                 actor='webhook',
-                new_value='new'
+                new_value='queued'
             )
-            
-            customer_request.status = 'queued'
-            customer_request.save()
             
             RequestEvent.objects.create(
                 request=customer_request,
                 event_type='queued',
                 actor='system',
-                old_value='new',
                 new_value='queued'
             )
 

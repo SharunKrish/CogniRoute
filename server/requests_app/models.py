@@ -11,19 +11,17 @@ class CustomerRequest(models.Model):
     )
     
     STATUS_CHOICES = (
-        ('new', 'New'),
         ('queued', 'Queued'),
         ('classified', 'Classified'),
         ('in_progress', 'In Progress'),
         ('resolved', 'Resolved'),
-        ('closed', 'Closed'),
     )
     
     source_channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='api')
     customer_name = models.CharField(max_length=255, blank=True)
     customer_email = models.EmailField(blank=True)
     original_message = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued', db_index=True)
     
     # Snapshots of the latest classification for fast search/filtering
     category_snapshot = models.CharField(max_length=50, blank=True, null=True, db_index=True)
