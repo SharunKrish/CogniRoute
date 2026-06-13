@@ -34,6 +34,9 @@ const dashboard = {
       `;
     }
     
+    // Load stats in parallel
+    this.loadStats();
+    
     try {
       const data = await api.get(url);
       if (!data) return;
@@ -50,6 +53,25 @@ const dashboard = {
     }
   },
 
+  async loadStats() {
+    try {
+      const stats = await api.get('/requests/stats/');
+      if (!stats) return;
+      
+      const updateVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+      
+      updateVal('stat-val-queued', stats.queued);
+      updateVal('stat-val-inprogress', stats.in_progress);
+      updateVal('stat-val-resolved', stats.resolved);
+      updateVal('stat-val-high', stats.high_priority);
+    } catch (e) {
+      console.error('Failed to load stats:', e);
+    }
+  },
+
   render(container) {
     container.innerHTML = `
       <div class="view-container">
@@ -62,6 +84,26 @@ const dashboard = {
           <button class="btn btn-primary" commandfor="create-request-dialog" command="show-modal">
             <span>+</span> Submit Request
           </button>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="dashboard-stats" id="dashboard-stats-container">
+          <div class="glass-card stat-card queued">
+            <div class="stat-value" id="stat-val-queued">-</div>
+            <div class="stat-label">Queued</div>
+          </div>
+          <div class="glass-card stat-card in-progress">
+            <div class="stat-value" id="stat-val-inprogress">-</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+          <div class="glass-card stat-card resolved">
+            <div class="stat-value" id="stat-val-resolved">-</div>
+            <div class="stat-label">Resolved</div>
+          </div>
+          <div class="glass-card stat-card high-priority">
+            <div class="stat-value" id="stat-val-high">-</div>
+            <div class="stat-label">High Priority</div>
+          </div>
         </div>
 
         <!-- Filter Panel -->
@@ -270,6 +312,8 @@ const dashboard = {
         this.renderPagination();
       }
     }
+    
+    this.loadStats();
   }
 };
 

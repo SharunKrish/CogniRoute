@@ -80,6 +80,18 @@ class CustomerRequestViewSet(viewsets.ModelViewSet):
             
         return queryset
 
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        """
+        Returns counts of requests by status and high priority for the dashboard stats counters.
+        """
+        return Response({
+            'queued': CustomerRequest.objects.filter(status='queued').count(),
+            'in_progress': CustomerRequest.objects.filter(status='in_progress').count(),
+            'resolved': CustomerRequest.objects.filter(status='resolved').count(),
+            'high_priority': CustomerRequest.objects.filter(priority_snapshot='high').count(),
+        })
+
     def create(self, request, *args, **kwargs):
         # Prevent duplicate submissions with Idempotency Key
         idempotency_key = request.data.get('idempotency_key')
