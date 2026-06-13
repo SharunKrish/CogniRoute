@@ -166,6 +166,15 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Add CORS allowed origins to ALLOWED_HOSTS to permit websocket handshakes from frontend domains
+for origin in CORS_ALLOWED_ORIGINS:
+    try:
+        host = urlparse(origin).hostname
+        if host and host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
+    except Exception:
+        pass
+
 # CSRF trusted origins (needed for the Vercel frontend domain)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in
