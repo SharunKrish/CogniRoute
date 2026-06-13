@@ -283,28 +283,33 @@ const dashboard = {
   },
 
   patchRequestInList(updatedReq) {
-    // Check if the request exists in local list, update it and re-render row or load list
-    const index = this.requests.findIndex(r => r.id === updatedReq.id);
+    console.log('[WS Patch] Incoming request:', updatedReq);
+    console.log('[WS Patch] Current filters:', JSON.stringify(this.filters));
+    console.log('[WS Patch] Current page:', this.currentPage);
     
-    // Check if the current filter would exclude this request
+    const index = this.requests.findIndex(r => r.id === updatedReq.id);
+    console.log('[WS Patch] Index in local list:', index);
+    
     const matchesFilter = 
       (!this.filters.status || this.filters.status === updatedReq.status) &&
       (!this.filters.priority || this.filters.priority === updatedReq.priority_snapshot) &&
       (!this.filters.category || this.filters.category === updatedReq.category_snapshot);
+    console.log('[WS Patch] Matches filter:', matchesFilter);
       
     if (index !== -1) {
       if (matchesFilter) {
+        console.log('[WS Patch] Updating existing item in list');
         this.requests[index] = updatedReq;
         this.renderTable();
       } else {
-        // Remove from list since it no longer matches filter
+        console.log('[WS Patch] Removing item from list (no longer matches filters)');
         this.requests.splice(index, 1);
         this.count--;
         this.renderTable();
         this.renderPagination();
       }
     } else {
-      // New request created: Add it to the top if on page 1 and matches filters
+      console.log('[WS Patch] Adding new item to list check:', (this.currentPage === 1 && matchesFilter));
       if (this.currentPage === 1 && matchesFilter) {
         this.requests.unshift(updatedReq);
         this.count++;
