@@ -99,9 +99,9 @@ const websocket = {
         break;
     }
 
-    // 2. Patch Dashboard list view in real time
+    // 2. Reload Dashboard list and stats in real time
     if (window.location.hash === '' || window.location.hash === '#dashboard') {
-      dashboard.patchRequestInList(request);
+      dashboard.loadRequests(dashboard.currentPage || 1);
     }
 
     // 3. Patch Detail view in real time (Fetch detail page again to get updated timeline/notes)
