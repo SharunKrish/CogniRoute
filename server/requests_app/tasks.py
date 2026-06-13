@@ -107,8 +107,5 @@ def classify_request(self, request_id):
         except self.MaxRetriesExceededError:
             logger.error(f"Max retries exceeded for request {request_id}.")
             with transaction.atomic():
-                customer_request.status = 'classified'  # Mark classified even if failed, or a specific failure state
-                # We can leave category/priority snapshot as None, but status could be 'classified' or 'failed'
-                # Let's keep status as 'new' or update to show classification failed
-                # Wait, setting snapshots to 'other' and 'low' or keeping them blank is fine. Let's just update event.
-                pass
+                customer_request.status = 'failed'
+                customer_request.save()

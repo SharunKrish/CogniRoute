@@ -41,7 +41,7 @@ services:
     plan: free
     dockerFilePath: Dockerfile
     dockerContext: .
-    dockerCommand: celery -A cogniroute worker --loglevel=info
+    dockerCommand: celery -A cogniroute worker --loglevel=info -P solo
     envVars:
       - key: DEBUG
         value: "False"
