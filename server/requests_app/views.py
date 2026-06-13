@@ -335,6 +335,93 @@ class InboundWebhookView(APIView):
             "status": "queued"
         }, status=status.HTTP_201_CREATED)
 
+class TelegramWebhookView(APIView):
+    """
+    Public webhook endpoint that receives messages from a Telegram Bot.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        # Optional: Security validation if TELEGRAM_WEBHOOK_SECRET is set
+        secret_token = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
+        expected_secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
+        
+        if expected_secret and secret_token != expected_secret:
+            return Response(
+                {"error": "Unauthorized webhook token."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        data = request.data
+        message_data = data.get('message')
+        if not message_data or 'text' not in message_data:
+            return Response({"status": "ignored", "reason": "Not a text message"})
+
+        from_user = message_data.get('from', {})
+        user_id = from_user.get('id')
+        username = from_user.get('username')
+        first_name = from_user.get('first_name', '')
+        last_name = from_user.get('last_name', '')
+        message_text = message_data.get('text')
+        message_id = message_data.get('message_id')
+        chat_id = message_data.get('chat', {}).get('id')
+
+        # Format Customer details
+        full_name = f"{first_name} {last_name}".strip()
+        if not full_name:
+            full_name = username or f"Telegram User {user_id}"
+
+        placeholder_email = f"telegram_{user_id}@telegram.user"
+        idempotency_key = f"telegram-{chat_id}-{message_id}"
+
+        # Prevent duplicate requests
+        existing = CustomerRequest.objects.filter(idempotency_key=idempotency_key).first()
+        if existing:
+            return Response(
+                {"message": "Duplicate request blocked by idempotency key.", "id": existing.id},
+                status=status.HTTP_200_OK
+            )
+
+        # Create request and trigger classification
+        with transaction.atomic():
+            customer_request = CustomerRequest.objects.create(
+                source_channel='telegram',
+                customer_name=full_name,
+                customer_email=placeholder_email,
+                original_message=message_text,
+                idempotency_key=idempotency_key,
+                status='queued'
+            )
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='created',
+                actor='telegram_bot',
+                new_value='queued'
+            )
+            
+            RequestEvent.objects.create(
+                request=customer_request,
+                event_type='queued',
+                actor='system',
+                new_value='queued'
+            )
+
+        from .tasks import classify_request
+        try:
+            classify_request.delay(customer_request.id)
+        except Exception as e:
+            print(f"Celery task queueing failed from Telegram webhook: {e}")
+
+        # Broadcast WebSocket event
+        broadcast_dashboard_update(customer_request, 'request_created')
+
+        return Response({
+            "message": "Telegram webhook request enqueued successfully.",
+            "request_id": customer_request.id,
+            "status": "queued"
+        }, status=status.HTTP_201_CREATED)
+
 import hmac
 import hashlib
 

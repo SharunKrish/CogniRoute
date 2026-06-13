@@ -23,6 +23,7 @@ class RequestTests(APITestCase):
         # URL targets
         self.request_list_url = reverse('request-list')
         self.webhook_url = reverse('inbound_webhook')
+        self.telegram_webhook_url = reverse('telegram_webhook')
         
         # Setup base request
         self.request_payload = {
@@ -161,6 +162,78 @@ class RequestTests(APITestCase):
         
         # Verify request created in DB
         self.assertTrue(CustomerRequest.objects.filter(customer_email='webhook@example.com').exists())
+
+    def test_telegram_webhook_success(self):
+        # 1. Payload format for Telegram bot webhook
+        payload = {
+            'message': {
+                'message_id': 54321,
+                'from': {
+                    'id': 987654,
+                    'first_name': 'Arthur',
+                    'last_name': 'Dent',
+                    'username': 'arthurdent'
+                },
+                'chat': {
+                    'id': 112233,
+                    'type': 'private'
+                },
+                'text': 'I have an urgent server connection problem'
+            }
+        }
+        res = self.client.post(self.telegram_webhook_url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['status'], 'queued')
+
+        # Check DB request
+        req = CustomerRequest.objects.get(id=res.data['request_id'])
+        self.assertEqual(req.source_channel, 'telegram')
+        self.assertEqual(req.customer_name, 'Arthur Dent')
+        self.assertEqual(req.customer_email, 'telegram_987654@telegram.user')
+        self.assertEqual(req.original_message, 'I have an urgent server connection problem')
+        self.assertEqual(req.idempotency_key, 'telegram-112233-54321')
+
+        # Check event logs
+        self.assertTrue(RequestEvent.objects.filter(request=req, event_type='created', actor='telegram_bot').exists())
+        self.assertTrue(RequestEvent.objects.filter(request=req, event_type='queued', actor='system').exists())
+
+    def test_telegram_webhook_duplicate(self):
+        payload = {
+            'message': {
+                'message_id': 8888,
+                'from': {'id': 9999, 'first_name': 'Ford'},
+                'chat': {'id': 7777},
+                'text': "Don't panic!"
+            }
+        }
+        res1 = self.client.post(self.telegram_webhook_url, payload, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+
+        res2 = self.client.post(self.telegram_webhook_url, payload, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertIn("Duplicate request blocked", res2.data['message'])
+
+    def test_telegram_webhook_with_secret(self):
+        from django.test import override_settings
+        payload = {
+            'message': {
+                'message_id': 1111,
+                'from': {'id': 2222, 'first_name': 'Trillian'},
+                'chat': {'id': 3333},
+                'text': 'Where is the heart of gold?'
+            }
+        }
+
+        with override_settings(TELEGRAM_WEBHOOK_SECRET='super-secret-token'):
+            # 1. Without/wrong secret header -> 401
+            res = self.client.post(self.telegram_webhook_url, payload, format='json')
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+            # 2. With correct secret header
+            headers = {'HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN': 'super-secret-token'}
+            res_authorized = self.client.post(self.telegram_webhook_url, payload, format='json', **headers)
+            self.assertEqual(res_authorized.status_code, status.HTTP_201_CREATED)
+
 
 
 class AIProviderHeuristicsTests(APITestCase):
