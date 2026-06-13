@@ -63,7 +63,7 @@ const dashboard = {
         if (el) el.textContent = val;
       };
       
-      updateVal('stat-val-queued', stats.queued);
+      updateVal('stat-val-classified', stats.classified);
       updateVal('stat-val-inprogress', stats.in_progress);
       updateVal('stat-val-resolved', stats.resolved);
       updateVal('stat-val-high', stats.high_priority);
@@ -88,9 +88,9 @@ const dashboard = {
 
         <!-- Stats Section -->
         <div class="dashboard-stats" id="dashboard-stats-container">
-          <div class="glass-card stat-card queued">
-            <div class="stat-value" id="stat-val-queued">-</div>
-            <div class="stat-label">Queued</div>
+          <div class="glass-card stat-card classified">
+            <div class="stat-value" id="stat-val-classified">-</div>
+            <div class="stat-label">Classified</div>
           </div>
           <div class="glass-card stat-card in-progress">
             <div class="stat-value" id="stat-val-inprogress">-</div>

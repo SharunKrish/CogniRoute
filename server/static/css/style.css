@@ -799,7 +799,7 @@ dialog[open]::backdrop {
   border-left: 4px solid var(--border-color);
 }
 
-.stat-card.queued {
+.stat-card.classified {
   border-left-color: var(--accent-purple);
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(17, 24, 39, 0.45) 100%);
 }
@@ -827,7 +827,7 @@ dialog[open]::backdrop {
   font-family: var(--font-sans);
 }
 
-.stat-card.queued .stat-value {
+.stat-card.classified .stat-value {
   color: #c084fc;
   text-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
 }

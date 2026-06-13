@@ -86,7 +86,7 @@ class CustomerRequestViewSet(viewsets.ModelViewSet):
         Returns counts of requests by status and high priority for the dashboard stats counters.
         """
         return Response({
-            'queued': CustomerRequest.objects.filter(status='queued').count(),
+            'classified': CustomerRequest.objects.filter(status='classified').count(),
             'in_progress': CustomerRequest.objects.filter(status='in_progress').count(),
             'resolved': CustomerRequest.objects.filter(status='resolved').count(),
             'high_priority': CustomerRequest.objects.filter(priority_snapshot='high').count(),

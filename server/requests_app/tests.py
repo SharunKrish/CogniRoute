@@ -85,15 +85,15 @@ class RequestTests(APITestCase):
         self.assertEqual(len(res.data['results']), 1)
 
     def test_request_stats(self):
-        CustomerRequest.objects.create(status='queued', priority_snapshot='low')
-        CustomerRequest.objects.create(status='queued', priority_snapshot='high')
+        CustomerRequest.objects.create(status='classified', priority_snapshot='low')
+        CustomerRequest.objects.create(status='classified', priority_snapshot='high')
         CustomerRequest.objects.create(status='in_progress', priority_snapshot='high')
         CustomerRequest.objects.create(status='resolved', priority_snapshot='medium')
 
         stats_url = reverse('request-stats')
         res = self.client.get(stats_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(res.data['queued'], 2)
+        self.assertEqual(res.data['classified'], 2)
         self.assertEqual(res.data['in_progress'], 1)
         self.assertEqual(res.data['resolved'], 1)
         self.assertEqual(res.data['high_priority'], 2)
