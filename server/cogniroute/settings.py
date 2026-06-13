@@ -185,7 +185,7 @@ if REDIS_URL.startswith('rediss://'):
                 "hosts": [
                     {
                         "address": REDIS_URL,
-                        "ssl": {"ssl_cert_reqs": ssl.CERT_NONE},
+                        "ssl_cert_reqs": ssl.CERT_NONE,
                     }
                 ],
             },
