@@ -175,14 +175,31 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Channels configuration
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [REDIS_URL],
+
+if REDIS_URL.startswith('rediss://'):
+    import ssl
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [
+                    {
+                        "address": REDIS_URL,
+                        "ssl": {"ssl_cert_reqs": ssl.CERT_NONE},
+                    }
+                ],
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [REDIS_URL],
+            },
+        },
+    }
 
 # Celery Configuration
 CELERY_BROKER_URL = REDIS_URL
