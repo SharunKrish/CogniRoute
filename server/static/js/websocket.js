@@ -2,6 +2,7 @@ const websocket = {
   socket: null,
   reconnectAttempts: 0,
   maxReconnectDelay: 30000,
+  pingInterval: null,
   
   connect() {
     const token = api.getAccessToken();
@@ -22,11 +23,13 @@ const websocket = {
       console.log('WebSocket connected successfully.');
       this.reconnectAttempts = 0;
       this.updateStatusUI(true);
+      this.startHeartbeat();
     };
 
     this.socket.onclose = (e) => {
       console.warn('WebSocket disconnected:', e.reason);
       this.updateStatusUI(false);
+      this.stopHeartbeat();
       
       // Auto-reconnect if not intentionally closed and still logged in
       if (api.getAccessToken()) {
@@ -57,7 +60,25 @@ const websocket = {
       this.socket.close();
       this.socket = null;
     }
+    this.stopHeartbeat();
     this.updateStatusUI(false);
+  },
+
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.pingInterval = setInterval(() => {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        // Send a ping frame/text to prevent reverse-proxy timeouts (e.g. Render 50s idle limit)
+        this.socket.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 25000); // Send ping every 25 seconds
+  },
+
+  stopHeartbeat() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
   },
 
   updateStatusUI(connected) {
