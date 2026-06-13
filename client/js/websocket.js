@@ -77,7 +77,7 @@ const websocket = {
         // Send a ping frame/text to prevent reverse-proxy timeouts (e.g. Render 50s idle limit)
         this.socket.send(JSON.stringify({ type: 'ping' }));
       }
-    }, 25000); // Send ping every 25 seconds
+    }, 15000); // Send ping every 15 seconds (well under Render's 50s idle limit)
   },
 
   stopHeartbeat() {

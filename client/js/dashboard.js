@@ -4,6 +4,7 @@ const dashboard = {
   nextPageUrl: null,
   prevPageUrl: null,
   count: 0,
+  pollTimer: null,
   
   filters: {
     status: '',
@@ -204,6 +205,58 @@ const dashboard = {
 
     // Handle initial list load
     this.loadRequests(1);
+
+    // Start background polling for reliable updates
+    this.startPolling();
+  },
+
+  // --- Smart Polling (fallback when WebSocket drops) ---
+  startPolling() {
+    this.stopPolling();
+    this.pollTimer = setInterval(() => this.silentRefresh(), 8000);
+  },
+
+  stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  },
+
+  async silentRefresh() {
+    // Only poll when we're actually on the dashboard
+    if (window.location.hash !== '#dashboard' && window.location.hash !== '') {
+      return;
+    }
+
+    let url = `/requests/?page=${this.currentPage}`;
+    if (this.filters.status) url += `&status=${this.filters.status}`;
+    if (this.filters.priority) url += `&priority=${this.filters.priority}`;
+    if (this.filters.category) url += `&category=${this.filters.category}`;
+    if (this.filters.search) url += `&search=${encodeURIComponent(this.filters.search)}`;
+
+    try {
+      const data = await api.get(url);
+      if (!data) return;
+
+      // Build fingerprint to detect actual changes (avoid flicker on no-change)
+      const newFingerprint = data.results.map(r => `${r.id}:${r.status}:${r.category_snapshot}:${r.priority_snapshot}`).join('|');
+      const currentFingerprint = this.requests.map(r => `${r.id}:${r.status}:${r.category_snapshot}:${r.priority_snapshot}`).join('|');
+
+      if (newFingerprint !== currentFingerprint || data.count !== this.count) {
+        this.requests = data.results;
+        this.nextPageUrl = data.next;
+        this.prevPageUrl = data.previous;
+        this.count = data.count;
+        this.renderTable();
+        this.renderPagination();
+      }
+
+      // Always refresh stats counters
+      this.loadStats();
+    } catch (e) {
+      // Silent failure — don't disrupt the UI
+    }
   },
 
   renderTable() {

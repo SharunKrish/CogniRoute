@@ -37,10 +37,12 @@ const appRouter = {
 
     // Route views
     if (hash === '#login') {
+      dashboard.stopPolling();
       auth.renderLoginView(this.mainContainer);
     } else if (hash === '#dashboard' || hash === '') {
       dashboard.render(this.mainContainer);
     } else if (hash.startsWith('#request/')) {
+      dashboard.stopPolling();
       const parts = hash.split('/');
       const id = parts[1];
       if (id) {
