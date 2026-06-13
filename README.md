@@ -1,8 +1,17 @@
-# CogniRoute — AI-Powered Customer Request Routing System
+# CogniRoute — Real-Time AI Customer Request Routing System
 
 CogniRoute is an internal operations queue system that automatically routes customer inquiries into workflow queues. It receives messages from forms, emails, or WhatsApp, classifies them using AI in the background, logs audit history, and displays live updates on a glassmorphic admin dashboard.
 
 Designed for SDE / AI Systems / Full-Stack assessments.
+
+---
+
+## 🔗 Live Demo & Project Links
+
+* **🎥 Demo Video (YouTube)**: [Watch the Walkthrough](https://youtu.be/VnFmczS_EHQ)
+* **🌐 Live Frontend App**: [cogni-route.vercel.app](https://cogni-route.vercel.app/)
+* **🤖 Telegram Integration**: [Interact with @srk_s22_bot](https://t.me/srk_s22_bot)
+* **⚡ Live Backend API**: [cogniroute.onrender.com](https://cogniroute.onrender.com/)
 
 ---
 
