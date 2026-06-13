@@ -53,6 +53,7 @@ const websocket = {
     this.socket.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
+        if (payload.type === 'pong') return; // Ignore heartbeat pong responses
         this.handleEvent(payload);
       } catch (err) {
         console.error('Error handling WebSocket message:', err);
@@ -125,9 +126,9 @@ const websocket = {
         break;
     }
 
-    // 2. Reload Dashboard list and stats in real time
+    // 2. Patch Dashboard list view in real time (smooth row insert/update)
     if (window.location.hash === '' || window.location.hash === '#dashboard') {
-      dashboard.loadRequests(dashboard.currentPage || 1);
+      dashboard.patchRequestInList(request);
     }
 
     // 3. Patch Detail view in real time (Fetch detail page again to get updated timeline/notes)

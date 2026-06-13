@@ -29,9 +29,13 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             )
 
     async def receive(self, text_data):
-        # Admin UI doesn't need to push data back to websocket,
-        # but we can log or ignore any client messages
-        pass
+        # Respond to heartbeat pings to keep the connection alive
+        try:
+            data = json.loads(text_data)
+            if data.get('type') == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong'}))
+        except (json.JSONDecodeError, Exception):
+            pass
 
     async def send_dashboard_update(self, event):
         # Called when an event is sent to the group

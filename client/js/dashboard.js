@@ -283,33 +283,24 @@ const dashboard = {
   },
 
   patchRequestInList(updatedReq) {
-    console.log('[WS Patch] Incoming request:', updatedReq);
-    console.log('[WS Patch] Current filters:', JSON.stringify(this.filters));
-    console.log('[WS Patch] Current page:', this.currentPage);
-    
     const index = this.requests.findIndex(r => r.id === updatedReq.id);
-    console.log('[WS Patch] Index in local list:', index);
     
     const matchesFilter = 
       (!this.filters.status || this.filters.status === updatedReq.status) &&
       (!this.filters.priority || this.filters.priority === updatedReq.priority_snapshot) &&
       (!this.filters.category || this.filters.category === updatedReq.category_snapshot);
-    console.log('[WS Patch] Matches filter:', matchesFilter);
       
     if (index !== -1) {
       if (matchesFilter) {
-        console.log('[WS Patch] Updating existing item in list');
         this.requests[index] = updatedReq;
         this.renderTable();
       } else {
-        console.log('[WS Patch] Removing item from list (no longer matches filters)');
         this.requests.splice(index, 1);
         this.count--;
         this.renderTable();
         this.renderPagination();
       }
     } else {
-      console.log('[WS Patch] Adding new item to list check:', (this.currentPage === 1 && matchesFilter));
       if (this.currentPage === 1 && matchesFilter) {
         this.requests.unshift(updatedReq);
         this.count++;
