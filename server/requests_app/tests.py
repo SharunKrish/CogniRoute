@@ -229,6 +229,7 @@ class RequestTests(APITestCase):
                 self.assertEqual(args[0], 'https://api.telegram.org/botfake-bot-token-123/sendMessage')
                 self.assertEqual(kwargs['json']['chat_id'], 998877)
                 self.assertEqual(kwargs['json']['reply_to_message_id'], 12345)
+                self.assertEqual(kwargs['json']['parse_mode'], 'HTML')
                 self.assertIn('Request #', kwargs['json']['text'])
 
     def test_telegram_webhook_duplicate(self):

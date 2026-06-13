@@ -421,16 +421,18 @@ class TelegramWebhookView(APIView):
                 send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                 reply_text = (
                     f"Hello {first_name or 'there'},\n\n"
-                    f"Your request has been received and logged as *Request #{customer_request.id}*.\n\n"
+                    f"Your request has been received and logged as <b>Request #{customer_request.id}</b>.\n\n"
                     f"Our AI routing engine is classifying and forwarding this to the appropriate queue shortly."
                 )
                 payload = {
                     "chat_id": chat_id,
                     "text": reply_text,
                     "reply_to_message_id": message_id,
-                    "parse_mode": "Markdown"
+                    "parse_mode": "HTML"
                 }
-                requests.post(send_url, json=payload, timeout=5)
+                resp = requests.post(send_url, json=payload, timeout=5)
+                if not resp.ok:
+                    print(f"Telegram API response error: {resp.status_code} - {resp.text}")
             except Exception as e:
                 print(f"Failed to send Telegram acknowledgment: {e}")
 
