@@ -110,6 +110,14 @@ const detail = {
               </summary>
               <pre style="margin-top: 0.5rem; background: rgba(0,0,0,0.4); padding: 0.75rem; border-radius: var(--radius-sm); font-family: var(--font-mono); overflow-x: auto; max-height: 200px; color: #a5f3fc;">${JSON.stringify(latestClass.raw_output, null, 2)}</pre>
             </details>
+
+            ${latestClass.provider === 'mock' && isAdmin ? `
+              <div style="margin-top: 1.25rem;">
+                <button id="detail-retry-btn-mock" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: 100%;">
+                  🔄 Re-classify with Gemini
+                </button>
+              </div>
+            ` : ''}
           </div>
         `;
       }
@@ -154,9 +162,9 @@ const detail = {
             </div>
           </div>
           <div style="display: flex; gap: 1rem; align-items: center;">
-            ${latestClass && latestClass.status === 'failed' && isAdmin ? `
+            ${latestClass && (latestClass.status === 'failed' || latestClass.provider === 'mock') && isAdmin ? `
               <button id="detail-retry-btn" class="btn btn-secondary">
-                🔄 Retry AI Route
+                🔄 Retry with AI
               </button>
             ` : ''}
             <span class="badge badge-${req.status}" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
@@ -260,6 +268,11 @@ const detail = {
     const runClassifyBtn = document.getElementById('detail-run-classify-btn');
     if (runClassifyBtn) {
       runClassifyBtn.addEventListener('click', () => this.retryAI());
+    }
+
+    const retryBtnMock = document.getElementById('detail-retry-btn-mock');
+    if (retryBtnMock) {
+      retryBtnMock.addEventListener('click', () => this.retryAI());
     }
   },
 
