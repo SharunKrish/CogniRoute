@@ -11,7 +11,6 @@ Designed for SDE / AI Systems / Full-Stack assessments.
 * **🎥 Demo Video (YouTube)**: [Watch the Walkthrough](https://youtu.be/VnFmczS_EHQ)
 * **🌐 Live Frontend App**: [cogni-route.vercel.app](https://cogni-route.vercel.app/)
 * **🤖 Telegram Integration**: [Interact with @srk_s22_bot](https://t.me/srk_s22_bot)
-* **⚡ Live Backend API**: [cogniroute.onrender.com](https://cogniroute.onrender.com/)
 
 ---
 
