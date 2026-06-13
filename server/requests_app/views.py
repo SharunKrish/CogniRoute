@@ -353,7 +353,8 @@ class TelegramWebhookView(APIView):
             )
 
         data = request.data
-        message_data = data.get('message')
+        # Support both regular message and channel_post updates (Telegram channels send channel_post)
+        message_data = data.get('message') or data.get('channel_post')
         if not message_data or 'text' not in message_data:
             return Response({"status": "ignored", "reason": "Not a text message"})
 
@@ -364,14 +365,20 @@ class TelegramWebhookView(APIView):
         last_name = from_user.get('last_name', '')
         message_text = message_data.get('text')
         message_id = message_data.get('message_id')
-        chat_id = message_data.get('chat', {}).get('id')
+        chat_data = message_data.get('chat', {})
+        chat_id = chat_data.get('id')
 
         # Format Customer details
         full_name = f"{first_name} {last_name}".strip()
         if not full_name:
-            full_name = username or f"Telegram User {user_id}"
+            if username:
+                full_name = username
+            elif chat_data.get('title'):
+                full_name = chat_data.get('title')
+            else:
+                full_name = f"Telegram User {user_id}" if user_id else f"Telegram Chat {chat_id}"
 
-        placeholder_email = f"telegram_{user_id}@telegram.user"
+        placeholder_email = f"telegram_{user_id or chat_id}@telegram.user"
         idempotency_key = f"telegram-{chat_id}-{message_id}"
 
         # Prevent duplicate requests
@@ -433,8 +440,12 @@ class TelegramWebhookView(APIView):
                 resp = requests.post(send_url, json=payload, timeout=5)
                 if not resp.ok:
                     print(f"Telegram API response error: {resp.status_code} - {resp.text}")
+                else:
+                    print(f"Telegram reply sent successfully to chat_id {chat_id}")
             except Exception as e:
                 print(f"Failed to send Telegram acknowledgment: {e}")
+        else:
+            print(f"Telegram reply skipped: bot_token is configured={bool(bot_token)}, chat_id={chat_id}, message_id={message_id}")
 
         # Broadcast WebSocket event
         broadcast_dashboard_update(customer_request, 'request_created')
