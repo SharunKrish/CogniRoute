@@ -413,6 +413,27 @@ class TelegramWebhookView(APIView):
         except Exception as e:
             print(f"Celery task queueing failed from Telegram webhook: {e}")
 
+        # Send Telegram Bot Acknowledgment reply if token is set
+        bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+        if bot_token and chat_id and message_id:
+            import requests
+            try:
+                send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                reply_text = (
+                    f"Hello {first_name or 'there'},\n\n"
+                    f"Your request has been received and logged as *Request #{customer_request.id}*.\n\n"
+                    f"Our AI routing engine is classifying and forwarding this to the appropriate queue shortly."
+                )
+                payload = {
+                    "chat_id": chat_id,
+                    "text": reply_text,
+                    "reply_to_message_id": message_id,
+                    "parse_mode": "Markdown"
+                }
+                requests.post(send_url, json=payload, timeout=5)
+            except Exception as e:
+                print(f"Failed to send Telegram acknowledgment: {e}")
+
         # Broadcast WebSocket event
         broadcast_dashboard_update(customer_request, 'request_created')
 

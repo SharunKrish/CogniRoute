@@ -197,6 +197,40 @@ class RequestTests(APITestCase):
         self.assertTrue(RequestEvent.objects.filter(request=req, event_type='created', actor='telegram_bot').exists())
         self.assertTrue(RequestEvent.objects.filter(request=req, event_type='queued', actor='system').exists())
 
+    def test_telegram_webhook_acknowledgment(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        
+        payload = {
+            'message': {
+                'message_id': 12345,
+                'from': {
+                    'id': 67890,
+                    'first_name': 'Zaphod',
+                    'last_name': 'Beeblebrox',
+                    'username': 'zaphod'
+                },
+                'chat': {
+                    'id': 998877,
+                    'type': 'private'
+                },
+                'text': 'Is this the end of the universe?'
+            }
+        }
+        
+        with patch('requests.post') as mock_post:
+            with override_settings(TELEGRAM_BOT_TOKEN='fake-bot-token-123'):
+                res = self.client.post(self.telegram_webhook_url, payload, format='json')
+                self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+                
+                # Assert requests.post was called to send acknowledgment
+                mock_post.assert_called_once()
+                args, kwargs = mock_post.call_args
+                self.assertEqual(args[0], 'https://api.telegram.org/botfake-bot-token-123/sendMessage')
+                self.assertEqual(kwargs['json']['chat_id'], 998877)
+                self.assertEqual(kwargs['json']['reply_to_message_id'], 12345)
+                self.assertIn('Request #', kwargs['json']['text'])
+
     def test_telegram_webhook_duplicate(self):
         payload = {
             'message': {

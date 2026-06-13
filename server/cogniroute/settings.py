@@ -236,6 +236,10 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 # Webhook Secret for HMAC verification
 WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', 'cognifyr-secret-token-123')
 
+# Telegram Bot configurations
+TELEGRAM_WEBHOOK_SECRET = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+
 # Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
